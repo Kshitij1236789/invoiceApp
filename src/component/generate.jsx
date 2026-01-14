@@ -5,10 +5,44 @@ import { Upload, Plus, Trash2, Download, Save } from 'lucide-react';
 import { generateInvoicePDF } from './pdf-generator';
 import { saveInvoice, getInvoiceById } from '../utils/invoiceStorage';
 import toast from 'react-hot-toast';
-import logoImage from '../assets/omnicassion-logo.svg';
+import logoImage from '../assets/omnicassion-logo.avif';
 import QRCode from 'qrcode';
 
-
+// Function to convert image URL to base64 with better AVIF support
+const imageToBase64 = (imagePath) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        // Set canvas size to a reasonable size for PDF
+        const maxWidth = 200;
+        const maxHeight = 80;
+        const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+        
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Convert to PNG format for better PDF compatibility
+        const dataUrl = canvas.toDataURL('image/png', 0.9);
+        console.log('Logo converted successfully to base64');
+        resolve(dataUrl);
+      } catch (e) {
+        console.error('Failed to convert logo to canvas:', e);
+        reject(e);
+      }
+    };
+    img.onerror = (e) => {
+      console.error('Failed to load logo image:', e);
+      reject(e);
+    };
+    img.src = imagePath;
+  });
+};
 
 export default function EventInvoiceGenerator() {
   // Logo and QR Code (pre-loaded)
@@ -477,6 +511,16 @@ export default function EventInvoiceGenerator() {
                     <button
                       onClick={async () => {
                         try {
+                          let logoBase64 = null;
+                          try {
+                            console.log('Converting logo to base64...');
+                            logoBase64 = await imageToBase64(logo);
+                            console.log('Logo converted successfully, length:', logoBase64.length);
+                          } catch (e) {
+                            console.warn('Could not load logo for PDF:', e);
+                            console.log('Logo path was:', logo);
+                          }
+
                           const invoiceData = {
                             invoiceNumber,
                             invoiceType,
@@ -492,7 +536,17 @@ export default function EventInvoiceGenerator() {
                             discount,
                             tokenMoneyPaid,
                             secondInstallment,
-                            totalCost
+                            totalCost,
+                            logo: logoBase64,
+                            qrCode: qrCode,
+                            vendorName,
+                            contactEmail,
+                            contactPhone1,
+                            contactPhone2,
+                            website,
+                            bankName,
+                            accountNo,
+                            accountName
                           };
 
                           await generateInvoicePDF(invoiceData);

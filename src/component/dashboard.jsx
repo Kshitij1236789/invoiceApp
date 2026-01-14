@@ -72,21 +72,7 @@ export default function Dashboard() {
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
 
-        {/* Create New */}
-        <Link to="/generate">
-          <div className="h-[380px] bg-white rounded-2xl border-2 border-dashed border-gray-300 hover:border-blue-500 hover:shadow-xl transition flex items-center justify-center cursor-pointer">
-
-            <div className="w-[75%] h-[85%] bg-gray-50 border rounded-xl flex flex-col items-center justify-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
-                <Plus className="w-8 h-8 text-blue-600" />
-              </div>
-              <p className="font-semibold text-gray-700">
-                Create Invoice
-              </p>
-            </div>
-
-          </div>
-        </Link>
+      
 
         {/* Invoice Cards */}
         {invoices.map((invoice) => (

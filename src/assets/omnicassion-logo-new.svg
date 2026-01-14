@@ -1,0 +1,13 @@
+<svg viewBox="0 0 400 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- OMNIC text -->
+  <text x="10" y="55" font-family="Arial Black, sans-serif" font-size="38" font-weight="900" fill="#2563EB" letter-spacing="-1px">OMNIC</text>
+  
+  <!-- Triangle/Tent shape -->
+  <polygon points="180,20 200,55 160,55" fill="#000000"/>
+  
+  <!-- SSION text -->
+  <text x="220" y="55" font-family="Arial Black, sans-serif" font-size="38" font-weight="900" fill="#2563EB" letter-spacing="-1px">SSION</text>
+  
+  <!-- Subtitle -->
+  <text x="10" y="70" font-family="Arial, sans-serif" font-size="10" fill="#6B7280">Event Management Platform</text>
+</svg>

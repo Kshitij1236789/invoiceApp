@@ -20,94 +20,206 @@ export async function generateInvoicePDF(data) {
     return y + (lines.length * fontSize * 0.4)
   }
 
-  // Header with Logo and QR Code area
+  // Header with professional logo handling
   pdf.setDrawColor(0, 0, 0)
-  pdf.setLineWidth(0.5)
+  pdf.setLineWidth(0.3)
   
-  // Logo placeholder (left)
-  pdf.rect(margin, yPos, 40, 15)
-  addText('OMNICASSION', margin + 2, yPos + 8, 35, 12, 'left')
-  addText('Event Management Platform', margin + 2, yPos + 12, 35, 8, 'left')
+  // Company logo and name (left side)
+  const logoX = margin
+  const logoY = yPos
   
-  // QR Code on the right - use generated QR if available, otherwise placeholder
-  const qrSize = 20
-  const qrX = pageWidth - margin - qrSize
-  if (data.qrCode) {
+  // Try to add the actual logo image if available
+  let logoAdded = false
+  if (data.logo) {
     try {
-      pdf.addImage(data.qrCode, 'PNG', qrX, yPos, qrSize, qrSize)
+      // Add logo image directly if it's a valid base64 data URL
+      if (data.logo.startsWith('data:image/')) {
+        console.log('Adding logo to PDF...')
+        pdf.addImage(data.logo, 'PNG', logoX, logoY, 40, 12)
+        logoAdded = true
+        console.log('Logo added successfully to PDF')
+      }
     } catch (e) {
-      console.error('Failed to add QR image to PDF:', e)
-      pdf.rect(qrX, yPos, qrSize, qrSize)
-      addText('QR', qrX + qrSize / 2, yPos + qrSize / 2 + 2, 15, 10, 'center')
+      console.log('Logo image failed to load, using text logo instead:', e)
     }
-  } else {
-    pdf.rect(qrX, yPos, qrSize, qrSize)
-    addText('QR', qrX + qrSize / 2, yPos + qrSize / 2 + 2, 15, 10, 'center')
   }
   
-  yPos += 25
+  // If logo wasn't added successfully, show text-based logo
+  if (!logoAdded) {
+    // OMNICASSION brand text with professional styling
+    pdf.setFontSize(24)
+    pdf.setFont(undefined, 'bold')
+    pdf.setTextColor(37, 99, 235) // Blue color
+    pdf.text('OMNIC', logoX, logoY + 12)
+    
+    // Triangle/A symbol - using simple line drawing for better compatibility
+    pdf.setFillColor(0, 0, 0) // Black triangle
+    pdf.setDrawColor(0, 0, 0)
+    pdf.setLineWidth(1.5)
+    const triangleX = logoX + 42
+    const triangleY = logoY + 2
+    
+    // Draw triangle using three lines and fill
+    pdf.line(triangleX, triangleY + 12, triangleX + 6, triangleY) // Left side
+    pdf.line(triangleX + 6, triangleY, triangleX + 12, triangleY + 12) // Right side  
+    pdf.line(triangleX + 12, triangleY + 12, triangleX, triangleY + 12) // Base
+    
+    // Fill the triangle area with smaller triangles for solid fill
+    for (let i = 0; i < 12; i++) {
+      const y = triangleY + i
+      const width = (12 - i) * 0.5
+      if (width > 0) {
+        pdf.line(triangleX + 6 - width, y, triangleX + 6 + width, y)
+      }
+    }
+    
+    pdf.setTextColor(37, 99, 235) // Blue color
+    pdf.text('SSION', triangleX + 16, logoY + 12)
+    
+    // Event Management Platform subtitle
+    pdf.setFontSize(9)
+    pdf.setFont(undefined, 'normal')
+    pdf.setTextColor(100, 100, 100)
+    pdf.text('Event Management Platform', logoX, logoY + 18)
+    pdf.text('All types of vendors and services related to your event are provided here', logoX, logoY + 22)
+  }
+  
+  // QR Code on the right with improved handling
+  const qrSize = 18
+  const qrX = pageWidth - margin - qrSize
+  pdf.setDrawColor(0, 0, 0)
+  pdf.setLineWidth(0.8)
+  pdf.rect(qrX - 2, yPos - 2, qrSize + 4, qrSize + 4)
+  
+  let qrAdded = false
+  if (data.qrCode && data.qrCode.startsWith('data:image/')) {
+    try {
+      // Add QR code image if available and valid
+      console.log('Adding QR code to PDF...')
+      pdf.addImage(data.qrCode, 'PNG', qrX, yPos, qrSize, qrSize)
+      qrAdded = true
+      console.log('QR code added successfully to PDF')
+    } catch (e) {
+      console.log('QR code failed to load:', e)
+    }
+  } else {
+    console.log('QR code data not available or invalid format:', data.qrCode ? 'Invalid format' : 'No QR data')
+  }
+  
+  if (!qrAdded) {
+    // Generate a simple QR-like pattern as placeholder
+    pdf.setFillColor(0, 0, 0)
+    const cellSize = qrSize / 9
+    const qrPattern = [
+      [1,1,1,0,1,0,1,1,1],
+      [1,0,1,0,1,0,1,0,1],
+      [1,1,1,0,1,0,1,1,1],
+      [0,0,0,0,0,0,0,0,0],
+      [1,0,1,1,0,1,1,0,1],
+      [0,1,0,1,1,0,0,1,0],
+      [1,1,1,0,0,1,1,0,1],
+      [1,0,1,1,0,0,1,0,1],
+      [1,1,1,0,1,1,0,1,1]
+    ]
+    
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        if (qrPattern[row][col]) {
+          pdf.rect(qrX + col * cellSize, yPos + row * cellSize, cellSize, cellSize, 'F')
+        }
+      }
+    }
+  }
+  
+  pdf.setTextColor(0, 0, 0) // Reset to black
+  
+  yPos += 30
 
-  // Horizontal line
+  // Horizontal separator line
+  pdf.setDrawColor(0, 0, 0)
+  pdf.setLineWidth(0.8)
   pdf.line(margin, yPos, pageWidth - margin, yPos)
-  yPos += 5
+  yPos += 8
 
-  // Top Row: Invoice Type on extreme left, Invoice Number in box on extreme right
-  pdf.setFontSize(20)
+  // QUOTATION title and invoice number
+  pdf.setFontSize(24)
   pdf.setFont(undefined, 'bold')
+  pdf.setTextColor(0, 0, 0)
   const invoiceTypeText = data.invoiceType || 'QUOTATION'
   pdf.text(invoiceTypeText, margin, yPos)
   
-  // Invoice Number in black border box on right
-  pdf.setFontSize(10)
+  // Invoice Number in professional box on right
+  pdf.setFontSize(11)
   pdf.setFont(undefined, 'normal')
-  const invoiceNumText = data.invoiceNumber || ''
+  const invoiceNumText = data.invoiceNumber || 'OMNI/26-01/867'
   const numWidth = pdf.getTextWidth(invoiceNumText)
-  const boxPadding = 4
-  const boxWidth = numWidth + (boxPadding * 2)
+  const boxPadding = 6
+  const boxWidth = Math.max(numWidth + (boxPadding * 2), 35)
+  const boxHeight = 8
   const boxX = pageWidth - margin - boxWidth
-  pdf.setDrawColor(0, 0, 0)
-  pdf.setLineWidth(0.5)
-  pdf.rect(boxX, yPos - 3, boxWidth, 8)
-  pdf.text(invoiceNumText, boxX + boxPadding, yPos + 2)
+  const boxY = yPos - 6
   
-  yPos += 12
+  pdf.setDrawColor(0, 0, 0)
+  pdf.setLineWidth(1)
+  pdf.rect(boxX, boxY, boxWidth, boxHeight)
+  pdf.text(invoiceNumText, boxX + boxWidth/2, boxY + boxHeight/2 + 1, { align: 'center' })
+  
+  yPos += 15
 
-  // Three Column Layout: Date Issued (left), Vendor (middle), Contact Info (right)
-  pdf.setFontSize(9)
+  // Professional three-column information layout
+  pdf.setFontSize(10)
+  pdf.setTextColor(0, 0, 0)
   const col1X = margin
-  const col2X = margin + 70
-  const col3X = pageWidth - margin - 60
+  const col2X = margin + 65
+  const col3X = pageWidth - margin - 55
   
   // Left Column - Date Issued
   pdf.setFont(undefined, 'bold')
   pdf.text('Date Issued:', col1X, yPos)
   pdf.setFont(undefined, 'normal')
-  pdf.text(data.dateIssued || 'N/A', col1X, yPos + 5)
+  pdf.setFontSize(9)
+  const dateText = data.dateIssued || new Date().toLocaleDateString('en-GB')
+  pdf.text(dateText, col1X, yPos + 6)
   
   // Middle Column - Vendor name
+  pdf.setFontSize(10)
   pdf.setFont(undefined, 'bold')
   pdf.text('Vendor name:', col2X, yPos)
   pdf.setFont(undefined, 'normal')
-  pdf.text(data.vendorName || 'omnicassion', col2X, yPos + 5)
+  pdf.setFontSize(9)
+  pdf.setTextColor(37, 99, 235) // Blue color for vendor name
+  pdf.text('omnicassion', col2X, yPos + 6)
   
-  // Right Column - Contact Info (right-aligned)
-  pdf.setFont(undefined, 'bold')
-  pdf.text('Contact Info:', col3X, yPos, { align: 'right' })
-  pdf.setFont(undefined, 'normal')
-  pdf.setFontSize(8)
-  pdf.text(data.contactEmail || '', col3X, yPos + 4, { align: 'right' })
-  pdf.text(`${data.contactPhone1 || ''}, ${data.contactPhone2 || ''}`, col3X, yPos + 7, { align: 'right' })
-  pdf.text(data.website || '', col3X, yPos + 10, { align: 'right' })
-  
-  yPos += 15
-
-  // Issued To (below Date Issued in left column)
+  // Right Column - Contact Info (properly aligned)
+  pdf.setTextColor(0, 0, 0)
   pdf.setFontSize(10)
   pdf.setFont(undefined, 'bold')
+  pdf.text('Contact Info:', col3X, yPos)
+  pdf.setFont(undefined, 'normal')
+  pdf.setFontSize(8)
+  const email = data.contactEmail || 'omnicassion@gmail.com'
+  const phone1 = data.contactPhone1 || '+91-6284598500'
+  const phone2 = data.contactPhone2 || '+91 9988777462'
+  const website = data.website || 'omnicassion.com'
+  
+  pdf.text(email, col3X, yPos + 4)
+  pdf.text(`${phone1}, ${phone2}`, col3X, yPos + 8)
+  pdf.text(website, col3X, yPos + 12)
+  
+  yPos += 18
+
+  // Issued To section with better styling
+  pdf.setFontSize(10)
+  pdf.setFont(undefined, 'bold')
+  pdf.setTextColor(0, 0, 0)
   pdf.text('Issued to:', col1X, yPos)
   pdf.setFont(undefined, 'normal')
-  pdf.text(data.issuedTo || 'N/A', col1X, yPos + 5)
-  yPos += 10
+  pdf.setFontSize(9)
+  pdf.setTextColor(37, 99, 235) // Blue color for recipient name
+  const issuedToText = data.issuedTo || 'kshitij'
+  pdf.text(issuedToText, col1X, yPos + 6)
+  pdf.setTextColor(0, 0, 0) // Reset color
+  yPos += 15
 
   // Calculate column positions for grid lines
   const col1End = margin + 90  // SERVICE column end

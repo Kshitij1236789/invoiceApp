@@ -1,10 +1,9 @@
-// Utility functions for storing and retrieving invoices from localStorage
-
-const STORAGE_KEY = 'saved_invoices';
+const STORAGE_KEY = "saved_invoices";
 
 export const saveInvoice = (invoiceData) => {
   try {
     const invoices = getInvoices();
+
     const invoice = {
       id: invoiceData.invoiceNumber || `INV-${Date.now()}`,
       invoiceNumber: invoiceData.invoiceNumber,
@@ -16,65 +15,64 @@ export const saveInvoice = (invoiceData) => {
       eventDate: invoiceData.eventDate,
       eventVenue: invoiceData.eventVenue,
       grandTotal: calculateGrandTotal(invoiceData),
-      createdAt: new Date().toISOString(),
       lastUpdated: new Date().toISOString(),
-      // Store full invoice data for viewing/editing
+
+      // FULL FORM DATA
       fullData: invoiceData
     };
-    
-    // Check if invoice with same number already exists
-    const existingIndex = invoices.findIndex(inv => inv.invoiceNumber === invoice.invoiceNumber);
-    
-    if (existingIndex >= 0) {
-      // Update existing invoice
-      invoices[existingIndex] = { ...invoices[existingIndex], ...invoice };
+
+    const index = invoices.findIndex(
+      inv => inv.invoiceNumber === invoice.invoiceNumber
+    );
+
+    if (index >= 0) {
+      invoices[index] = {
+        ...invoices[index],
+        ...invoice,
+        fullData: invoiceData,
+        lastUpdated: new Date().toISOString()
+      };
     } else {
-      // Add new invoice
       invoices.push(invoice);
     }
-    
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(invoices));
     return invoice;
-  } catch (error) {
-    console.error('Error saving invoice:', error);
-    throw error;
+  } catch (e) {
+    console.error("Save failed", e);
+    return null;
   }
 };
 
 export const getInvoices = () => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch (error) {
-    console.error('Error retrieving invoices:', error);
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
     return [];
   }
 };
 
 export const getInvoiceById = (id) => {
-  try {
-    const invoices = getInvoices();
-    return invoices.find(inv => inv.id === id || inv.invoiceNumber === id);
-  } catch (error) {
-    console.error('Error retrieving invoice:', error);
-    return null;
-  }
+  const invoices = getInvoices();
+  return invoices.find(
+    inv => inv.id === id || inv.invoiceNumber === id
+  );
 };
 
 export const deleteInvoice = (id) => {
-  try {
-    const invoices = getInvoices();
-    const filtered = invoices.filter(inv => inv.id !== id && inv.invoiceNumber !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-    return true;
-  } catch (error) {
-    console.error('Error deleting invoice:', error);
-    return false;
-  }
+  const invoices = getInvoices().filter(
+    inv => inv.id !== id && inv.invoiceNumber !== id
+  );
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(invoices));
 };
 
 const calculateGrandTotal = (data) => {
-  const subtotal = data.items?.reduce((sum, item) => sum + (item.total || 0), 0) || 0;
+  const subtotal = data.items?.reduce(
+    (sum, i) => sum + (i.total || 0),
+    0
+  ) || 0;
+
   return subtotal + (data.siteCharges || 0) - (data.discount || 0);
 };
 
@@ -91,6 +89,3 @@ export const formatDate = (dateString) => {
     return dateString;
   }
 };
-
-
-
