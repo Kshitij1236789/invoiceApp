@@ -221,133 +221,187 @@ export async function generateInvoicePDF(data) {
   pdf.setTextColor(0, 0, 0) // Reset color
   yPos += 15
 
-  // Calculate column positions for grid lines
-  const col1End = margin + 90  // SERVICE column end
-  const col2End = margin + 115 // QTY column end
-  const col3End = margin + 145 // PRICE column end
+  // Calculate proper column positions for professional table layout
+  const serviceColWidth = 90   // Much more conservative width
+  const qtyColWidth = 25       // Width for quantity column
+  const priceColWidth = 35     // Width for price column
   
-  // Services Table Header
-  pdf.setFillColor(0, 0, 0)
-  pdf.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F')
+  const serviceColEnd = margin + serviceColWidth
+  const qtyColEnd = serviceColEnd + qtyColWidth
+  const priceColEnd = qtyColEnd + priceColWidth
+  // Total column uses remaining space
+  
+  // Professional Services Table Header
+  pdf.setFillColor(40, 40, 40) // Dark gray background
+  const headerHeight = 10
+  pdf.rect(margin, yPos, pageWidth - 2 * margin, headerHeight, 'F')
   pdf.setTextColor(255, 255, 255)
-  pdf.setFontSize(9)
+  pdf.setFontSize(10)
   pdf.setFont(undefined, 'bold')
   
-  pdf.text('SERVICE', margin + 2, yPos + 5)
-  pdf.text('QTY', margin + 100, yPos + 5, { align: 'center' })
-  pdf.text('PRICE', margin + 130, yPos + 5, { align: 'right' })
-  pdf.text('TOTAL', pageWidth - margin - 2, yPos + 5, { align: 'right' })
+  pdf.text('SERVICE', margin + 3, yPos + 7)
+  pdf.text('QTY', serviceColEnd + 10, yPos + 7, { align: 'center' })
+  pdf.text('PRICE', qtyColEnd + 15, yPos + 7, { align: 'center' })
+  pdf.text('TOTAL', pageWidth - margin - 3, yPos + 7, { align: 'right' })
   
-  // Draw vertical grid lines in header
+  // Draw vertical separators in header
   pdf.setDrawColor(255, 255, 255)
-  pdf.setLineWidth(0.3)
-  pdf.line(col1End, yPos, col1End, yPos + 8)
-  pdf.line(col2End, yPos, col2End, yPos + 8)
-  pdf.line(col3End, yPos, col3End, yPos + 8)
+  pdf.setLineWidth(0.5)
+  pdf.line(serviceColEnd, yPos, serviceColEnd, yPos + headerHeight)
+  pdf.line(qtyColEnd, yPos, qtyColEnd, yPos + headerHeight)
+  pdf.line(priceColEnd, yPos, priceColEnd, yPos + headerHeight)
   
   pdf.setTextColor(0, 0, 0)
-  yPos += 8
+  yPos += headerHeight
 
-  // Services Table Rows
+  // Professional table rows with reliable text wrapping
   pdf.setFontSize(8)
   pdf.setFont(undefined, 'normal')
-  pdf.setDrawColor(200, 200, 200) // Light gray for grid lines
-  pdf.setLineWidth(0.2)
+  pdf.setDrawColor(220, 220, 220) // Light gray borders
+  pdf.setLineWidth(0.3)
+  
+  let isAlternateRow = false
   
   data.items?.forEach((item, index) => {
-    if (yPos > pageHeight - 30) {
+    if (yPos > pageHeight - 40) {
       pdf.addPage()
       yPos = margin
     }
     
-    const rowHeight = 7
+    // Set font properties before text operations
+    pdf.setFontSize(8)
+    pdf.setFont(undefined, 'normal')
+    
+    // Calculate text wrapping with very conservative width
+    const serviceText = item.service || 'Service description'
+    const maxTextWidth = serviceColWidth - 10 // 10px total padding
+    
+    // Use jsPDF's built-in text splitting with conservative width
+    const serviceLines = pdf.splitTextToSize(serviceText, maxTextWidth)
+    
+    // Calculate row height based on number of lines
+    const baseRowHeight = 10
+    const lineSpacing = 4
+    const rowHeight = Math.max(baseRowHeight, serviceLines.length * lineSpacing + 6)
     const rowTop = yPos
     
-    // Draw horizontal grid line at top of row
+    // Alternate row background for better readability
+    if (isAlternateRow) {
+      pdf.setFillColor(248, 248, 248)
+      pdf.rect(margin, rowTop, pageWidth - 2 * margin, rowHeight, 'F')
+    }
+    
+    // Draw row borders
+    pdf.setDrawColor(220, 220, 220)
     pdf.line(margin, rowTop, pageWidth - margin, rowTop)
+    pdf.line(serviceColEnd, rowTop, serviceColEnd, rowTop + rowHeight)
+    pdf.line(qtyColEnd, rowTop, qtyColEnd, rowTop + rowHeight)
+    pdf.line(priceColEnd, rowTop, priceColEnd, rowTop + rowHeight)
     
-    // Draw vertical grid lines
-    pdf.line(col1End, rowTop, col1End, rowTop + rowHeight)
-    pdf.line(col2End, rowTop, col2End, rowTop + rowHeight)
-    pdf.line(col3End, rowTop, col3End, rowTop + rowHeight)
+    // Service description with simple, reliable text rendering
+    const startX = margin + 3
+    const startY = rowTop + 6
     
-    const serviceText = item.service || 'Service description'
-    const serviceLines = pdf.splitTextToSize(serviceText, 80)
-    pdf.text(serviceLines[0] || '', margin + 2, rowTop + 4)
-    pdf.text(String(item.quantity || 0), margin + 100, rowTop + 4, { align: 'center' })
-    pdf.text(`${(item.price || 0).toLocaleString()} Rs`, margin + 130, rowTop + 4, { align: 'right' })
-    pdf.text(`${(item.total || 0).toLocaleString()} Rs`, pageWidth - margin - 2, rowTop + 4, { align: 'right' })
+    // Render each line of wrapped text
+    for (let i = 0; i < serviceLines.length; i++) {
+      const line = serviceLines[i]
+      if (line && line.trim()) {
+        const yPos = startY + (i * lineSpacing)
+        pdf.setFontSize(8)
+        pdf.setFont(undefined, 'normal')
+        pdf.text(line.trim(), startX, yPos)
+      }
+    }
+    
+    // Quantity centered in its cell
+    const qtyY = rowTop + (rowHeight / 2) + 2
+    pdf.text(String(item.quantity || 1), serviceColEnd + (qtyColWidth/2), qtyY, { align: 'center' })
+    
+    // Price centered in its cell
+    const priceText = `${(item.price || 0).toLocaleString()} Rs`
+    pdf.text(priceText, qtyColEnd + (priceColWidth/2), qtyY, { align: 'center' })
+    
+    // Total right-aligned in its cell
+    const totalText = `${(item.total || 0).toLocaleString()} Rs`
+    pdf.text(totalText, pageWidth - margin - 3, qtyY, { align: 'right' })
     
     yPos += rowHeight
-    if (serviceLines.length > 1) {
-      pdf.line(margin, yPos, pageWidth - margin, yPos)
-      pdf.text(serviceLines.slice(1).join(' '), margin + 2, yPos + 4)
-      yPos += 4
-    }
+    isAlternateRow = !isAlternateRow
   })
-
-  // Site Charges row
-  pdf.setDrawColor(200, 200, 200)
-  pdf.line(margin, yPos, pageWidth - margin, yPos)
-  pdf.line(col1End, yPos, col1End, yPos + 6)
-  pdf.line(col2End, yPos, col2End, yPos + 6)
-  pdf.line(col3End, yPos, col3End, yPos + 6)
-  yPos += 5
-  pdf.text('Site Charges', margin + 2, yPos + 4)
-  pdf.text(`${(data.siteCharges || 0).toLocaleString()} Rs`, pageWidth - margin - 2, yPos + 4, { align: 'right' })
-  yPos += 6
+  
+  // Bottom border of table
   pdf.line(margin, yPos, pageWidth - margin, yPos)
 
-  // Subtotal - Different styling with light gray background
-  pdf.setFillColor(240, 240, 240)
-  pdf.rect(margin, yPos, pageWidth - 2 * margin, 7, 'F')
-  pdf.setDrawColor(200, 200, 200)
-  pdf.line(col3End, yPos, col3End, yPos + 7)
-  pdf.setFont(undefined, 'bold')
+  // Site Charges with improved styling
+  const siteRowHeight = 12
+  pdf.setFillColor(248, 248, 248)
+  pdf.rect(margin, yPos, pageWidth - 2 * margin, siteRowHeight, 'F')
+  pdf.setDrawColor(220, 220, 220)
+  pdf.line(priceColEnd, yPos, priceColEnd, yPos + siteRowHeight)
   pdf.setFontSize(9)
-  pdf.text('SUBTOTAL', margin + 100, yPos + 5, { align: 'right' })
-  const subtotal = data.items?.reduce((sum, item) => sum + (item.total || 0), 0) || 0
-  pdf.text(`${subtotal.toLocaleString()} Rs`, pageWidth - margin - 2, yPos + 5, { align: 'right' })
-  yPos += 7
+  pdf.text('Site Charges', margin + 3, yPos + 7)
+  const siteChargesText = `${(data.siteCharges || 0).toLocaleString()} Rs`
+  pdf.text(siteChargesText, pageWidth - margin - 3, yPos + 7, { align: 'right' })
+  yPos += siteRowHeight
   pdf.line(margin, yPos, pageWidth - margin, yPos)
 
-  // Discount
+  // Subtotal with professional styling
+  pdf.setFillColor(245, 245, 245)
+  pdf.rect(margin, yPos, pageWidth - 2 * margin, 10, 'F')
   pdf.setDrawColor(200, 200, 200)
-  pdf.line(col3End, yPos, col3End, yPos + 6)
-  pdf.setFont(undefined, 'normal')
-  pdf.text('DISCOUNT', margin + 100, yPos + 4, { align: 'right' })
-  pdf.text(`${(data.discount || 0).toLocaleString()} Rs`, pageWidth - margin - 2, yPos + 4, { align: 'right' })
-  yPos += 6
-  pdf.line(margin, yPos, pageWidth - margin, yPos)
-
-  // Grand Total - Bold and prominent
-  pdf.setFillColor(0, 0, 0)
-  pdf.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F')
-  pdf.setDrawColor(255, 255, 255)
-  pdf.line(col3End, yPos, col3End, yPos + 8)
-  pdf.setTextColor(255, 255, 255)
+  pdf.line(priceColEnd, yPos, priceColEnd, yPos + 10)
+  pdf.setFont(undefined, 'bold')
   pdf.setFontSize(10)
-  pdf.setFont(undefined, 'bold')
-  pdf.text('GRAND TOTAL', margin + 100, yPos + 5, { align: 'right' })
-  const grandTotal = subtotal + (data.siteCharges || 0) - (data.discount || 0)
-  pdf.text(`${grandTotal.toLocaleString()} Rs`, pageWidth - margin - 2, yPos + 5, { align: 'right' })
-  pdf.setTextColor(0, 0, 0)
+  // Align subtotal label to the right edge of PRICE column
+  pdf.text('SUBTOTAL', priceColEnd - 3, yPos + 7, { align: 'right' })
+  const subtotal = (data.items?.reduce((sum, item) => sum + (item.total || 0), 0) || 0) + (data.siteCharges || 0)
+  pdf.text(`${subtotal.toLocaleString()} Rs`, pageWidth - margin - 3, yPos + 7, { align: 'right' })
   yPos += 10
-  pdf.setDrawColor(200, 200, 200)
   pdf.line(margin, yPos, pageWidth - margin, yPos)
 
-  // Token Money and Installments
-  pdf.setFontSize(9)
+  // Discount row
   pdf.setFont(undefined, 'normal')
-  pdf.line(col3End, yPos, col3End, yPos + 6)
-  pdf.text('TOKEN MONEY PAID', margin + 100, yPos + 4, { align: 'right' })
-  pdf.text(`${(data.tokenMoneyPaid || 0).toLocaleString()}`, pageWidth - margin - 2, yPos + 4, { align: 'right' })
-  yPos += 6
+  pdf.setFontSize(9)
+  pdf.line(priceColEnd, yPos, priceColEnd, yPos + 8)
+  pdf.text('DISCOUNT', priceColEnd - 3, yPos + 6, { align: 'right' })
+  pdf.text(`${(data.discount || 0).toLocaleString()} Rs`, pageWidth - margin - 3, yPos + 6, { align: 'right' })
+  yPos += 8
   pdf.line(margin, yPos, pageWidth - margin, yPos)
-  pdf.line(col3End, yPos, col3End, yPos + 6)
-  pdf.text('SECOND INSTALLMENT', margin + 100, yPos + 4, { align: 'right' })
-  pdf.text(`${(data.secondInstallment || 0).toLocaleString()}`, pageWidth - margin - 2, yPos + 4, { align: 'right' })
-  yPos += 6
+
+  // Grand Total with enhanced prominence
+  pdf.setFillColor(40, 40, 40)
+  const grandTotalHeight = 12
+  pdf.rect(margin, yPos, pageWidth - 2 * margin, grandTotalHeight, 'F')
+  pdf.setDrawColor(255, 255, 255)
+  pdf.line(priceColEnd, yPos, priceColEnd, yPos + grandTotalHeight)
+  pdf.setTextColor(255, 255, 255)
+  pdf.setFontSize(11)
+  pdf.setFont(undefined, 'bold')
+  pdf.text('GRAND TOTAL', priceColEnd - 3, yPos + 8, { align: 'right' })
+  const grandTotal = subtotal - (data.discount || 0)
+  pdf.text(`${grandTotal.toLocaleString()} Rs`, pageWidth - margin - 3, yPos + 8, { align: 'right' })
+  pdf.setTextColor(0, 0, 0)
+  yPos += grandTotalHeight
+
+  // Payment tracking rows with better styling
+  pdf.setFont(undefined, 'normal')
+  pdf.setFontSize(9)
+  pdf.setDrawColor(220, 220, 220)
+  
+  // Token Money row
+  const paymentRowHeight = 10
+  pdf.line(margin, yPos, pageWidth - margin, yPos)
+  pdf.line(priceColEnd, yPos, priceColEnd, yPos + paymentRowHeight)
+  pdf.text('TOKEN MONEY PAID', priceColEnd - 3, yPos + 6, { align: 'right' })
+  pdf.text(`${(data.tokenMoneyPaid || 0).toLocaleString()}`, pageWidth - margin - 3, yPos + 6, { align: 'right' })
+  yPos += paymentRowHeight
+  
+  // Second Installment row
+  pdf.line(margin, yPos, pageWidth - margin, yPos)
+  pdf.line(priceColEnd, yPos, priceColEnd, yPos + paymentRowHeight)
+  pdf.text('SECOND INSTALLMENT', priceColEnd - 3, yPos + 6, { align: 'right' })
+  pdf.text(`${(data.secondInstallment || 0).toLocaleString()}`, pageWidth - margin - 3, yPos + 6, { align: 'right' })
+  yPos += paymentRowHeight
   pdf.line(margin, yPos, pageWidth - margin, yPos)
   yPos += 12
 

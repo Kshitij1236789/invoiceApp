@@ -12,7 +12,7 @@ import logoImage from "./assets/omnicassion-logo.avif"
 
 function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center px-6 py-20">
+    <main className="min-h-screen bg-linear-to-br from-blue-500 to-blue-600 flex items-center justify-center px-6 py-20">
       <div className="max-w-5xl text-center">
 
         <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-6 leading-tight">
